@@ -1,0 +1,26 @@
+---
+# Source: gatekeeper/templates/upgrade-crds-hook.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gatekeeper-admin-upgrade-crds
+  labels:
+    helm.sh/chart: gatekeeper-3.21.1
+    app.kubernetes.io/name: gatekeeper
+    app.kubernetes.io/instance: gatekeeper
+    app.kubernetes.io/version: "3.21.1"
+    app.kubernetes.io/managed-by: Helm
+    release: gatekeeper
+    heritage: Helm
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: "hook-succeeded,before-hook-creation"
+    helm.sh/hook-weight: "1"
+subjects:
+  - kind: ServiceAccount
+    name: gatekeeper-admin-upgrade-crds
+    namespace: gatekeeper-system
+roleRef:
+  kind: ClusterRole
+  name: gatekeeper-admin-upgrade-crds
+  apiGroup: rbac.authorization.k8s.io

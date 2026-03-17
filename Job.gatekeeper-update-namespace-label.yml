@@ -1,0 +1,112 @@
+---
+# Source: gatekeeper/templates/namespace-post-install.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gatekeeper-update-namespace-label
+  namespace: "gatekeeper-system"
+  labels:
+    app: gatekeeper
+    chart: gatekeeper
+    gatekeeper.sh/system: "yes"
+    heritage: Helm
+    release: gatekeeper
+    helm.sh/chart: gatekeeper-3.21.1
+    app.kubernetes.io/name: gatekeeper
+    app.kubernetes.io/instance: gatekeeper
+    app.kubernetes.io/version: "3.21.1"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+spec:
+  template:
+    metadata:
+      annotations: {}
+      labels:
+        app: gatekeeper
+        chart: gatekeeper
+        gatekeeper.sh/system: "yes"
+        heritage: Helm
+        release: gatekeeper
+        helm.sh/chart: gatekeeper-3.21.1
+        app.kubernetes.io/name: gatekeeper
+        app.kubernetes.io/instance: gatekeeper
+        app.kubernetes.io/version: "3.21.1"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      restartPolicy: OnFailure
+      serviceAccount: gatekeeper-update-namespace-label
+      volumes:
+        - name: cert
+          secret:
+            secretName: gatekeeper-webhook-server-cert
+      initContainers:
+        - name: webhook-probe-post
+          image: "curlimages/curl:8.12.0"
+          imagePullPolicy: IfNotPresent
+          command:
+            - "curl"
+          args:
+            - "--retry"
+            - "99999"
+            - "--retry-connrefused"
+            - "--retry-max-time"
+            - "60"
+            - "--retry-delay"
+            - "1"
+            - "--max-time"
+            - "2"
+            - "--cacert"
+            - /certs/ca.crt
+            - "-v"
+            - "https://gatekeeper-webhook-service.gatekeeper-system.svc/v1/admitlabel?timeout=2s"
+          resources: null
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 999
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - mountPath: /certs
+              name: cert
+              readOnly: true
+      containers:
+        - name: kubectl-label
+          image: "openpolicyagent/gatekeeper-crds:v3.21.1"
+          imagePullPolicy: IfNotPresent
+          args:
+            - label
+            - ns
+            - gatekeeper-system
+            - admission.gatekeeper.sh/ignore=no-self-managing
+            - pod-security.kubernetes.io/audit=restricted
+            - pod-security.kubernetes.io/audit-version=latest
+            - pod-security.kubernetes.io/warn=restricted
+            - pod-security.kubernetes.io/warn-version=latest
+            - pod-security.kubernetes.io/enforce=restricted
+            - pod-security.kubernetes.io/enforce-version=v1.24
+            - --overwrite
+          resources: null
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 999
+            runAsNonRoot: true
+            runAsUser: 1000
+      nodeSelector:
+        kubernetes.io/os: linux
+      affinity: {}
+      tolerations: []

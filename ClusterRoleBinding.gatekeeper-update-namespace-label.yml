@@ -1,0 +1,26 @@
+---
+# Source: gatekeeper/templates/namespace-post-install.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gatekeeper-update-namespace-label
+  labels:
+    helm.sh/chart: gatekeeper-3.21.1
+    app.kubernetes.io/name: gatekeeper
+    app.kubernetes.io/instance: gatekeeper
+    app.kubernetes.io/version: "3.21.1"
+    app.kubernetes.io/managed-by: Helm
+    release: gatekeeper
+    heritage: Helm
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gatekeeper-update-namespace-label
+subjects:
+  - kind: ServiceAccount
+    name: gatekeeper-update-namespace-label
+    namespace: "gatekeeper-system"

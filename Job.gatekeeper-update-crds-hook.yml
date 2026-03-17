@@ -1,0 +1,66 @@
+---
+# Source: gatekeeper/templates/upgrade-crds-hook.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gatekeeper-update-crds-hook
+  namespace: gatekeeper-system
+  labels:
+    app: gatekeeper
+    chart: gatekeeper
+    gatekeeper.sh/system: "yes"
+    heritage: Helm
+    release: gatekeeper
+    helm.sh/chart: gatekeeper-3.21.1
+    app.kubernetes.io/name: gatekeeper
+    app.kubernetes.io/instance: gatekeeper
+    app.kubernetes.io/version: "3.21.1"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: "hook-succeeded,before-hook-creation"
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      name: gatekeeper-update-crds-hook
+      annotations: {}
+      labels:
+        app: gatekeeper
+        chart: gatekeeper
+        gatekeeper.sh/system: "yes"
+        heritage: Helm
+        release: gatekeeper
+        helm.sh/chart: gatekeeper-3.21.1
+        app.kubernetes.io/name: gatekeeper
+        app.kubernetes.io/instance: gatekeeper
+        app.kubernetes.io/version: "3.21.1"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: gatekeeper-admin-upgrade-crds
+      restartPolicy: Never
+      containers:
+        - name: crds-upgrade
+          image: 'openpolicyagent/gatekeeper-crds:v3.21.1'
+          imagePullPolicy: 'IfNotPresent'
+          args:
+            - apply
+            - -f
+            - crds/
+          resources: {}
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+      affinity: {}
+      tolerations: []
+      nodeSelector:
+        kubernetes.io/os: linux

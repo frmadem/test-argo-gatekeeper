@@ -1,0 +1,20 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sblockcrddelete
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sBlockCrdDelete
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sblockcrddelete
+
+        violation[{"msg": msg}] {
+          input.review.operation == "DELETE"
+          input.review.object.spec.group == "firestartr.dev"
+
+          msg := sprintf("Deletion of CRDs with group '%v' is prohibited.", [input.review.object.spec.group])
+        }
